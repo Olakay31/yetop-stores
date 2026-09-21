@@ -1,0 +1,253 @@
+model Category {
+  id        Uuid     @id
+  name      String   @unique
+  slug      String   @unique
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now())
+
+  products Product[]
+
+  @@rls
+}
+
+model Product {
+  id          Uuid     @id
+  name        String
+  slug        String   @unique
+  description String?
+  imageUrl    String?
+  isActive    Boolean  @default(true)
+  isFeatured  Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @default(now())
+
+  categoryId Uuid
+  category   Category @relation(fields: [categoryId], references: [id])
+
+  units        ProductUnit[]
+  orderItems   OrderItem[]
+  priceHistory PriceHistory[]
+
+  @@rls
+}
+
+model ProductUnit {
+  id            Uuid     @id
+  unitName      String
+  price         Decimal
+  minOrderQty   Int      @default(1)
+  stockQuantity Int      @default(0)
+  reservedQty   Int      @default(0)
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @default(now())
+
+  productId Uuid
+  product   Product @relation(fields: [productId], references: [id])
+
+  orderItems    OrderItem[]
+  priceHistory  PriceHistory[]
+  inventoryLogs InventoryTransaction[]
+
+  @@unique([productId, unitName])
+
+  @@rls
+}
+
+model Customer {
+  id        Uuid     @id
+  fullName  String
+  phone     String   @unique
+  email     String?
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now())
+
+  orders Order[]
+
+  @@rls
+}
+
+model Order {
+  id          Uuid   @id
+  orderNumber String @unique
+
+  status String @default("PENDING_APPROVAL")
+
+  productsTotal Decimal
+  deliveryFee   Decimal?
+  grandTotal    Decimal?
+
+  deliveryPaymentMethod String @default("PENDING_CONFIRMATION")
+
+  // Customer delivery preference.
+  // PENDING = not selected yet.
+  // YETOP = Yetop delivery.
+  // OWN_DRIVER = customer's own driver.
+  // PICKUP = customer pickup.
+  deliveryPreference String @default("PENDING")
+
+  // Delivery fee payment status.
+  // NOT_REQUIRED = own driver or pickup.
+  // PENDING = delivery arrangement not yet confirmed.
+  // AWAITING_PAYMENT = delivery fee confirmed and awaiting payment.
+  // PAID = delivery fee paid.
+  // PAY_ON_DELIVERY = delivery fee will be paid on delivery.
+  deliveryFeePaymentStatus String @default("NOT_REQUIRED")
+
+  // Optional own-driver information.
+  driverName        String?
+  driverPhone       String?
+  driverVehicleInfo String?
+
+  // Optional delivery or pickup instruction.
+  deliveryNote String?
+
+  customerName    String
+  customerPhone   String
+  customerEmail   String?
+  deliveryAddress String
+  deliveryCity    String
+  deliveryState   String
+
+  cancellationReason String?
+  adminNote          String?
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @default(now())
+  approvedAt  DateTime?
+  cancelledAt DateTime?
+  fulfilledAt DateTime?
+  deliveredAt DateTime?
+
+  // Internal timestamp for when a pickup was completed.
+  collectedAt DateTime?
+
+  // Stock reservation expiry timestamp.
+  reservationExpiresAt DateTime?
+
+  customerId Uuid
+  customer   Customer @relation(fields: [customerId], references: [id])
+
+  items    OrderItem[]
+  payments Payment[]
+
+  @@rls
+}
+
+model OrderItem {
+  id Uuid @id
+
+  quantity  Int
+  unitPrice Decimal
+  lineTotal Decimal
+
+  productName String
+  unitName    String
+
+  createdAt DateTime @default(now())
+
+  orderId Uuid
+  order   Order @relation(fields: [orderId], references: [id])
+
+  productId Uuid
+  product   Product @relation(fields: [productId], references: [id])
+
+  productUnitId Uuid
+  productUnit   ProductUnit @relation(fields: [productUnitId], references: [id])
+
+  @@rls
+}
+
+model PriceHistory {
+  id Uuid @id
+
+  oldPrice  Decimal?
+  newPrice  Decimal
+  changedBy String?
+  reason    String?
+
+  createdAt DateTime @default(now())
+
+  productId Uuid
+  product   Product @relation(fields: [productId], references: [id])
+
+  productUnitId Uuid
+  productUnit   ProductUnit @relation(fields: [productUnitId], references: [id])
+
+  @@rls
+}
+
+model InventoryTransaction {
+  id Uuid @id
+
+  type      String
+  quantity  Int
+  reason    String?
+  reference String?
+
+  createdAt DateTime @default(now())
+
+  productUnitId Uuid
+  productUnit   ProductUnit @relation(fields: [productUnitId], references: [id])
+
+  @@rls
+}
+
+model Payment {
+  id Uuid @id
+
+  status           String  @default("PENDING")
+  paymentType      String  @default("PRODUCT")
+  amount           Decimal
+  paymentReference String?
+  evidenceUrl      String?
+  adminNote        String?
+
+  submittedAt DateTime?
+  verifiedAt  DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @default(now())
+
+  orderId Uuid
+  order   Order @relation(fields: [orderId], references: [id])
+
+  paymentAccountId Uuid?
+  paymentAccount   PaymentAccount? @relation(fields: [paymentAccountId], references: [id])
+
+  // Payment account snapshot at the time of submission.
+  paidToBankName      String?
+  paidToAccountName   String?
+  paidToAccountNumber String?
+
+  @@rls
+}
+
+model AdminUser {
+  id           Uuid     @id
+  fullName     String
+  email        String   @unique
+  passwordHash String
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @default(now())
+
+  @@rls
+}
+
+model PaymentAccount {
+  id            Uuid     @id
+  bankName      String
+  accountName   String
+  accountNumber String
+  instructions  String?
+  isActive      Boolean  @default(true)
+  displayOrder  Int      @unique @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @default(now())
+
+  payments Payment[]
+
+  @@rls
+}
