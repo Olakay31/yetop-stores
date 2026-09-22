@@ -1,6 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import {
+    Suspense,
+    useEffect,
+    useState,
+  } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import Header from "@/app/components/Header";
@@ -41,7 +45,7 @@ function formatMoney(
   )}`;
 }
 
-export default function PayOrderPage() {
+function PayOrderPageContent() {
   const searchParams =
     useSearchParams();
 
@@ -916,5 +920,31 @@ export default function PayOrderPage() {
 
       <Footer />
     </div>
+  );
+}
+
+export default function PayOrderPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-[#FAFAF7]">
+          <Header />
+
+          <main className="flex min-h-[60vh] items-center justify-center px-6 py-16">
+            <div className="text-center">
+              <div className="mx-auto h-10 w-10 animate-spin rounded-full border-4 border-gray-200 border-t-[#14532D]" />
+
+              <p className="mt-4 text-sm font-medium text-gray-500">
+                Loading payment page...
+              </p>
+            </div>
+          </main>
+
+          <Footer />
+        </div>
+      }
+    >
+      <PayOrderPageContent />
+    </Suspense>
   );
 }
